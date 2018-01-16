@@ -37,34 +37,41 @@ def dist_matrix(latt, pos, sum_atom):#计算距离矩阵
     return dis_m
 
 def main():
-    M_Z = np.array([28 , 72.5 , 1])#相对质量
+    M_Z = np.array([28 , 72.5 , 1])*1.674*10**(-27)#相对质量KG
 
-    R = 3#截断半径
-    with open('CONTCAR.vasp') as f:
+    R = 5*10**(-10)#截断半径s
+    with open('/home/qiusb/Caculation/vasp/SiH4_phonon/POSCAR') as f:
         content = f.read()
         latt, pos, numbers = from_string(content)
-        pos_cc = np.array(mat(pos)*mat(latt))
+        pos_cc = np.array(mat(pos)*mat(latt))*10**(-10)
     #print(latt, pos, numbers)
     sum_atom = sum(numbers)
     M = np.zeros(sum_atom)#质量
     for m in range(0,sum_atom):
-        M[m]=M_Z[0]*bool(m<numbers[0])+M_Z[1]*bool(numbers[0]-1<m<numbers[0]
+        M[m]=M_Z[0]*bool(m<numbers[0])+M_Z[1]*bool(numbers[0]-1<m<numbers[0]\
                  +numbers[1])+M_Z[2]*bool(m>numbers[0]+numbers[1]-1)
 
-    print(M)
-    dist_m = dist_matrix(latt, pos, sum_atom)
-    #print(dist_m)
-    for ax in [0,1,2]:#XYZ方向
-        a = np.zeros((sum_atom, sum_atom))
-        #print(a)
-        for i in range(0,sum_atom):
-            for j in range(0,sum_atom):
-                if dist_m[i][j]<R and i!=j:#计算一定距离内原子相互作用
-                    print(abs(pos_cc[i][ax]-pos_cc[j][ax])/dist_m[i][j])
-                    K = 1*abs(pos_cc[i][ax]-pos_cc[j][ax])/dist_m[i][j]/M[i]
-                    a[i][j] = a[i][j] + K
-                    a[i][i] = a[i][i] - K
-    print(a)
+    #print(M)
+    dist_m = dist_matrix(latt, pos, sum_atom)*10**(-10)
+    print(dist_m)
+    a = np.zeros((3*sum_atom, 3*sum_atom))
+    #print(a)
+    for i in range(0,3*sum_atom):
+        for j in range(0,3*sum_atom):
+            if dist_m[i%sum_atom][j%sum_atom]<R and i%sum_atom != j%sum_atom:#计算一定距离内原子相互作用
+                #print(abs(pos_cc[i][ax]-pos_cc[j][ax])/dist_m[i][j])
+                K =70
+                a[i][j] = a[i][j]\
+                    +K*abs(pos_cc[i%sum_atom][int(i/sum_atom)]-pos_cc[j%sum_atom][int(i/sum_atom)])\
+                    *abs(pos_cc[i%sum_atom][int(j/sum_atom)]-pos_cc[j%sum_atom][int(j/sum_atom)])/dist_m[i%sum_atom][j%sum_atom]**2/M[i%sum_atom]
+                a[i][i%sum_atom+int(j/sum_atom)*sum_atom] = a[i][i%sum_atom+int(j/sum_atom)*sum_atom]\
+                    - K*abs(pos_cc[i%sum_atom][int(i/sum_atom)]-pos_cc[j%sum_atom][int(i/sum_atom)])\
+                    *abs(pos_cc[i%sum_atom][int(j/sum_atom)]-pos_cc[j%sum_atom][int(j/sum_atom)])/dist_m[i%sum_atom][j%sum_atom]**2/M[i%sum_atom]
 
+    #print(a)
+    e,w = np.linalg.eig(a)
+    #print(e)
+    omega = np.array([sqrt(-i) for i in e])
+    print(omega)
 
 main()
